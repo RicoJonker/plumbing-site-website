@@ -2,11 +2,82 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Test Site</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Plumbing Site Tracker</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: #f1f1f1;
+    }
+    h1 {
+      text-align: center;
+    }
+    .card {
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      max-width: 600px;
+      margin: 20px auto;
+    }
+    button {
+      padding: 10px 15px;
+      margin: 5px;
+      border: none;
+      border-radius: 8px;
+      background: #007bff;
+      color: white;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    textarea, input {
+      width: 100%;
+      padding: 10px;
+      margin-top: 5px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+    }
+  </style>
 </head>
 <body>
-  <h1 style="color: green; text-align: center;">✅ Your Plumbing Site Is Live!</h1>
-  <p style="text-align: center;">If you're seeing this, GitHub Pages is working perfectly.</p>
+
+  <h1>Plumbing Site Tracker</h1>
+
+  <div class="card">
+    <h2>Job Site Details</h2>
+    <input type="text" placeholder="Site name" />
+    <textarea placeholder="Progress update..."></textarea>
+    <select>
+      <option>In Progress</option>
+      <option>Paused</option>
+      <option>Completed</option>
+    </select>
+    <button>Add Job Site</button>
+  </div>
+
+  <div class="card">
+    <h2>Log Time</h2>
+    <input type="time" />
+    <input type="time" />
+    <button>Submit Time Log</button>
+  </div>
+
+  <div class="card">
+    <h2>Upload Photo</h2>
+    <input type="file" accept="image/*" />
+    <button>Upload</button>
+  </div>
+
+  <div class="card">
+    <h2>Material Used</h2>
+    <input type="text" placeholder="Material name" />
+    <input type="number" placeholder="Quantity" />
+    <button>Submit</button>
+  </div>
+
 </body>
 </html>
