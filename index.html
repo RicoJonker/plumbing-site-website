@@ -34,12 +34,27 @@
     button:hover {
       background: #0056b3;
     }
-    textarea, input {
+    textarea, input, select {
       width: 100%;
       padding: 10px;
       margin-top: 5px;
       border-radius: 8px;
       border: 1px solid #ccc;
+      box-sizing: border-box;
+    }
+    .summary-section {
+      max-width: 600px;
+      margin: 20px auto;
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    img.thumb {
+      max-width: 100px;
+      margin: 5px 0;
+      border-radius: 8px;
+      display: block;
     }
   </style>
 </head>
@@ -47,37 +62,291 @@
 
   <h1>Plumbing Site Tracker</h1>
 
-  <div class="card">
-    <h2>Job Site Details</h2>
-    <input type="text" placeholder="Site name" />
-    <textarea placeholder="Progress update..."></textarea>
-    <select>
+  <div class="card" id="job-site-card">
+    <h2>Add Job Site</h2>
+    <input type="text" id="siteName" placeholder="Site name" />
+    <textarea id="progressUpdate" placeholder="Progress update..."></textarea>
+    <select id="siteStatus">
       <option>In Progress</option>
       <option>Paused</option>
       <option>Completed</option>
     </select>
-    <button>Add Job Site</button>
+    <button id="addSiteBtn">Add Job Site</button>
   </div>
 
-  <div class="card">
+  <div class="card" id="time-log-card">
     <h2>Log Time</h2>
-    <input type="time" />
-    <input type="time" />
-    <button>Submit Time Log</button>
+    <select id="timeLogSiteSelect">
+      <option value="">Select site</option>
+    </select>
+    <label>Start Time</label>
+    <input type="time" id="startTime" />
+    <label>End Time</label>
+    <input type="time" id="endTime" />
+    <button id="submitTimeLogBtn">Submit Time Log</button>
   </div>
 
-  <div class="card">
+  <div class="card" id="photo-upload-card">
     <h2>Upload Photo</h2>
-    <input type="file" accept="image/*" />
-    <button>Upload</button>
+    <select id="photoSiteSelect">
+      <option value="">Select site</option>
+    </select>
+    <input type="file" id="photoInput" accept="image/*" />
+    <button id="uploadPhotoBtn">Upload</button>
   </div>
 
-  <div class="card">
+  <div class="card" id="material-used-card">
     <h2>Material Used</h2>
-    <input type="text" placeholder="Material name" />
-    <input type="number" placeholder="Quantity" />
-    <button>Submit</button>
+    <select id="materialSiteSelect">
+      <option value="">Select site</option>
+    </select>
+    <input type="text" id="materialName" placeholder="Material name" />
+    <input type="number" id="materialQty" placeholder="Quantity" min="1" />
+    <button id="submitMaterialBtn">Submit</button>
   </div>
+
+  <div class="summary-section" id="summarySection">
+    <h2>Tracked Job Sites Summary</h2>
+    <div id="siteSummary"></div>
+  </div>
+
+<script>
+  // Data keys in localStorage
+  const LS_KEYS = {
+    JOB_SITES: 'jobSites',
+    TIME_LOGS: 'timeLogs',
+    MATERIALS: 'materials',
+    PHOTOS: 'photos'
+  };
+
+  // Load from localStorage or init empty arrays
+  let jobSites = JSON.parse(localStorage.getItem(LS_KEYS.JOB_SITES)) || [];
+  let timeLogs = JSON.parse(localStorage.getItem(LS_KEYS.TIME_LOGS)) || [];
+  let materials = JSON.parse(localStorage.getItem(LS_KEYS.MATERIALS)) || [];
+  let photos = JSON.parse(localStorage.getItem(LS_KEYS.PHOTOS)) || [];
+
+  // DOM elements
+  const siteNameInput = document.getElementById('siteName');
+  const progressInput = document.getElementById('progressUpdate');
+  const statusSelect = document.getElementById('siteStatus');
+  const addSiteBtn = document.getElementById('addSiteBtn');
+
+  const timeLogSiteSelect = document.getElementById('timeLogSiteSelect');
+  const startTimeInput = document.getElementById('startTime');
+  const endTimeInput = document.getElementById('endTime');
+  const submitTimeLogBtn = document.getElementById('submitTimeLogBtn');
+
+  const photoSiteSelect = document.getElementById('photoSiteSelect');
+  const photoInput = document.getElementById('photoInput');
+  const uploadPhotoBtn = document.getElementById('uploadPhotoBtn');
+
+  const materialSiteSelect = document.getElementById('materialSiteSelect');
+  const materialNameInput = document.getElementById('materialName');
+  const materialQtyInput = document.getElementById('materialQty');
+  const submitMaterialBtn = document.getElementById('submitMaterialBtn');
+
+  const siteSummary = document.getElementById('siteSummary');
+
+  // Utility: save all data back to localStorage
+  function saveAll() {
+    localStorage.setItem(LS_KEYS.JOB_SITES, JSON.stringify(jobSites));
+    localStorage.setItem(LS_KEYS.TIME_LOGS, JSON.stringify(timeLogs));
+    localStorage.setItem(LS_KEYS.MATERIALS, JSON.stringify(materials));
+    localStorage.setItem(LS_KEYS.PHOTOS, JSON.stringify(photos));
+  }
+
+  // Utility: populate all site selects with current job sites
+  function populateSiteSelects() {
+    const selects = [timeLogSiteSelect, photoSiteSelect, materialSiteSelect];
+    selects.forEach(select => {
+      select.innerHTML = '<option value="">Select site</option>';
+      jobSites.forEach((site, idx) => {
+        const option = document.createElement('option');
+        option.value = idx;
+        option.textContent = site.name;
+        select.appendChild(option);
+      });
+    });
+  }
+
+  // Add Job Site
+  addSiteBtn.addEventListener('click', () => {
+    const name = siteNameInput.value.trim();
+    const progress = progressInput.value.trim();
+    const status = statusSelect.value;
+
+    if (!name) {
+      alert('Please enter a site name.');
+      return;
+    }
+
+    // Add new site
+    jobSites.push({ name, progress, status });
+    saveAll();
+    populateSiteSelects();
+    renderSummary();
+
+    // Clear inputs
+    siteNameInput.value = '';
+    progressInput.value = '';
+    statusSelect.value = 'In Progress';
+  });
+
+  // Submit Time Log
+  submitTimeLogBtn.addEventListener('click', () => {
+    const siteIndex = timeLogSiteSelect.value;
+    const start = startTimeInput.value;
+    const end = endTimeInput.value;
+
+    if (siteIndex === '') {
+      alert('Please select a site.');
+      return;
+    }
+    if (!start || !end) {
+      alert('Please select both start and end times.');
+      return;
+    }
+    if (start >= end) {
+      alert('End time must be after start time.');
+      return;
+    }
+
+    timeLogs.push({
+      siteIndex: parseInt(siteIndex),
+      start,
+      end,
+      timestamp: new Date().toISOString()
+    });
+    saveAll();
+    renderSummary();
+
+    startTimeInput.value = '';
+    endTimeInput.value = '';
+    timeLogSiteSelect.value = '';
+  });
+
+  // Upload Photo
+  uploadPhotoBtn.addEventListener('click', () => {
+    const siteIndex = photoSiteSelect.value;
+    if (siteIndex === '') {
+      alert('Please select a site.');
+      return;
+    }
+    if (!photoInput.files || photoInput.files.length === 0) {
+      alert('Please select an image to upload.');
+      return;
+    }
+
+    const file = photoInput.files[0];
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      photos.push({
+        siteIndex: parseInt(siteIndex),
+        dataUrl: e.target.result,
+        timestamp: new Date().toISOString()
+      });
+      saveAll();
+      renderSummary();
+
+      photoInput.value = '';
+      photoSiteSelect.value = '';
+    };
+    reader.readAsDataURL(file);
+  });
+
+  // Submit Material
+  submitMaterialBtn.addEventListener('click', () => {
+    const siteIndex = materialSiteSelect.value;
+    const materialName = materialNameInput.value.trim();
+    const quantity = parseInt(materialQtyInput.value);
+
+    if (siteIndex === '') {
+      alert('Please select a site.');
+      return;
+    }
+    if (!materialName) {
+      alert('Please enter a material name.');
+      return;
+    }
+    if (!quantity || quantity <= 0) {
+      alert('Please enter a valid quantity.');
+      return;
+    }
+
+    materials.push({
+      siteIndex: parseInt(siteIndex),
+      materialName,
+      quantity,
+      timestamp: new Date().toISOString()
+    });
+    saveAll();
+    renderSummary();
+
+    materialSiteSelect.value = '';
+    materialNameInput.value = '';
+    materialQtyInput.value = '';
+  });
+
+  // Render summary of all data
+  function renderSummary() {
+    if (jobSites.length === 0) {
+      siteSummary.innerHTML = '<p>No job sites added yet.</p>';
+      return;
+    }
+
+    let html = '';
+    jobSites.forEach((site, idx) => {
+      html += `<div style="border-bottom:1px solid #ccc; margin-bottom: 15px; padding-bottom: 10px;">
+        <h3>${site.name} <small>(${site.status})</small></h3>
+        <p><strong>Progress:</strong> ${site.progress || 'No update'}</p>`;
+
+      // Time logs for this site
+      const siteTimeLogs = timeLogs.filter(log => log.siteIndex === idx);
+      if (siteTimeLogs.length) {
+        html += '<p><strong>Time Logs:</strong><ul>';
+        siteTimeLogs.forEach(log => {
+          html += `<li>${log.start} - ${log.end} (${new Date(log.timestamp).toLocaleString()})</li>`;
+        });
+        html += '</ul></p>';
+      } else {
+        html += '<p><strong>Time Logs:</strong> None</p>';
+      }
+
+      // Materials for this site
+      const siteMaterials = materials.filter(m => m.siteIndex === idx);
+      if (siteMaterials.length) {
+        html += '<p><strong>Materials Used:</strong><ul>';
+        siteMaterials.forEach(m => {
+          html += `<li>${m.materialName} — Quantity: ${m.quantity} (${new Date(m.timestamp).toLocaleString()})</li>`;
+        });
+        html += '</ul></p>';
+      } else {
+        html += '<p><strong>Materials Used:</strong> None</p>';
+      }
+
+      // Photos for this site
+      const sitePhotos = photos.filter(p => p.siteIndex === idx);
+      if (sitePhotos.length) {
+        html += '<p><strong>Photos:</strong><br/>';
+        sitePhotos.forEach(p => {
+          html += `<img src="${p.dataUrl}" class="thumb" alt="Site photo" />`;
+        });
+        html += '</p>';
+      } else {
+        html += '<p><strong>Photos:</strong> None</p>';
+      }
+
+      html += '</div>';
+    });
+
+    siteSummary.innerHTML = html;
+  }
+
+  // Initial setup
+  populateSiteSelects();
+  renderSummary();
+
+</script>
 
 </body>
 </html>
